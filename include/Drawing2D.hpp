@@ -34,6 +34,38 @@ public:
         }
     }
 
+    void fill_polygon(const std::vector<Point2D>& pts, uint8_t c=255) {
+        if (pts.size() < 3) return;
+
+        // Find y-range
+        int minY = (int)std::floor(pts[0].y), maxY = minY;
+        for (auto& p : pts) {
+            minY = std::min(minY, (int)std::floor(p.y));
+            maxY = std::max(maxY, (int)std::floor(p.y));
+        }
+
+        // Scanline
+        for (int y = minY; y <= maxY; ++y) {
+            std::vector<int> nodes;
+            size_t n = pts.size();
+            for (size_t i=0,j=n-1; i<n; j=i++) {
+                const Point2D& pi = pts[i];
+                const Point2D& pj = pts[j];
+                if ((pi.y < y && pj.y >= y) || (pj.y < y && pi.y >= y)) {
+                    int x = (int)(pi.x + (y - pi.y) * (pj.x - pi.x) / (pj.y - pi.y));
+                    nodes.push_back(x);
+                }
+            }
+            std::sort(nodes.begin(), nodes.end());
+            for (size_t k=0; k+1 < nodes.size(); k+=2) {
+                for (int x=nodes[k]; x<nodes[k+1]; ++x) {
+                    rb.set_pixel(x,y,c);
+                }
+            }
+        }
+    }
+
+
     void circle(const Point2D& center, int radius, uint8_t c=255) {
         Bresenham::circle(rb, (int)std::lround(center.x), (int)std::lround(center.y), radius, c);
     }
