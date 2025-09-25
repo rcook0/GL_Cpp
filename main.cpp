@@ -30,6 +30,17 @@ int main() {
     std::cout << "Centroid: " << tri.centroid() << "\n";
     std::cout << "Normal: " << tri.normal() << "\n";
     std::cout << "Area: " << tri.area() << "\n";
+
+    Point2D p1(1,0);
+    Transformation2D rot = Transformation2D::rotation(M_PI/2);
+    Transformation2D trans = Transformation2D::translation(2,3);
+
+    Point2D pRot = rot.apply(p1);
+    Point2D pTrans = trans.apply(pRot);
+
+    std::cout << "Original: " << p1 << "\n";
+    std::cout << "Rotated: " << pRot << "\n";
+    std::cout << "Translated: " << pTrans << "\n";
     
     return 0;
 }
