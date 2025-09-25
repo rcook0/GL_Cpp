@@ -107,6 +107,51 @@ public:
         }
     }
 
+    void fill_polygon_shaded(const   std::vector<Point2D>& pts2d,
+                             const std::vector<double>& depths,
+                             const std::vector<uint8_t>& intensities) {
+        if (pts2d.size()<3) return;
+        if (pts2d.size()!=depths.size() || pts2d.size()!=intensities.size()) return;
+
+        int minY=(int)std::floor(pts2d[0].y), maxY=minY;
+        for (auto& p : pts2d) {
+            minY=std::min(minY,(int)std::floor(p.y));
+            maxY=std::max(maxY,(int)std::floor(p.y));
+        }
+
+        for (int y=minY; y<=maxY; ++y) {
+            struct Node { int x; double z; double i; };
+            std::vector<Node> nodes;
+            size_t n=pts2d.size();
+            for (size_t i=0,j=n-1;i<n;j=i++) {
+                const Point2D& pi=pts2d[i]; const Point2D& pj=pts2d[j];
+                double zi=depths[i], zj=depths[j];
+                double ii=intensities[i], ij=intensities[j];
+                if ((pi.y<y && pj.y>=y)||(pj.y<y && pi.y>=y)) {
+                    double t=(y-pi.y)/(pj.y-pi.y);
+                    int x=(int)(pi.x+t*(pj.x-pi.x));
+                    double z=zi+t*(zj-zi);
+                    double I=ii+t*(ij-ii);
+                    nodes.push_back({x,z,I});
+                }
+            }
+            std::sort(nodes.begin(),nodes.end(),[](auto&a,auto&b){return a.x<b.x;});
+            for (size_t k=0;k+1<nodes.size();k+=2) {
+                int x0=nodes[k].x, x1=nodes[k+1].x;
+                double z0=nodes[k].z, z1=nodes[k+1].z;
+                double i0=nodes[k].i, i1=nodes[k+1].i;
+                for (int x=x0;x<=x1;++x) {
+                    double t=(x1==x0)?0.0:(double)(x-x0)/(x1-x0);
+                    double z=z0+t*(z1-z0);
+                    double I=i0+t*(i1-i0);
+                    if (rb.test_and_set_depth(x,y,z)) {
+                        rb.set_pixel(x,y, clamp255(I));
+                    }
+                }
+            }
+        }
+    }
+
 
     void circle(const Point2D& center, int radius, uint8_t c=255) {
         Bresenham::circle(rb, (int)std::lround(center.x), (int)std::lround(center.y), radius, c);
