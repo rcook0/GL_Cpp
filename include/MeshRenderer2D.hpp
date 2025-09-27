@@ -65,4 +65,42 @@ public:
             if (drawWire) draw.polygon(pts2d, 255);
         }
     }
+
+    void render_phong(const Mesh3D& mesh,
+                  const std::vector<Point3D>& vertexNormals,
+                  bool drawWire=true,
+                  uint8_t base=220, double kd=0.7, double ks=0.3, double shininess=24.0) {
+    Drawing2D draw(rb);
+
+    auto viewport=[&](const Point2D& p){
+        double x=(p.x+1.0)*0.5*rb.width;
+        double y=(1.0-(p.y+1.0)*0.5)*rb.height;
+        return Point2D(x,y);
+    };
+
+    for (const auto& face : mesh.faces) {
+        if (face.indices.size()<3) continue;
+
+        Polygon3D poly = mesh.to_polygon(face);
+        Point3D n = poly.normal();        // view-space face normal
+        if (n.z >= 0) continue;           // backface cull
+
+        std::vector<Point2D> pts2d;
+        std::vector<Point3D> vpos;
+        std::vector<Point3D> vnorm;
+
+        for (int vi : face.indices) {
+            const Point3D& P = mesh.vertices[vi];
+            const Point3D& N = vertexNormals[vi];
+            vpos.push_back(P);
+            vnorm.push_back(N);
+            pts2d.push_back(viewport(projection.project(P)));
+        }
+
+        draw.fill_polygon_phong(pts2d, vpos, vnorm,
+                                base, kd, ks, shininess, lightDir);
+
+        if (drawWire) draw.polygon(pts2d, 255);
+    }
+}
 };
