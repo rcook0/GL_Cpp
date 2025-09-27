@@ -152,6 +152,74 @@ public:
         }
     }
 
+    // Per-pixel Phong shading with Z-buffer
+    void fill_polygon_phong(const std::vector<Point2D>& pts2d,
+                            const std::vector<Point3D>& viewPos,    // per-vertex view-space positions
+                            const std::vector<Point3D>& viewNorm,   // per-vertex view-space normals
+                            uint8_t base=200,
+                            double kd=0.7, double ks=0.3, double shininess=16.0,
+                            const Point3D& lightDir = Point3D(0,0,-1)) {
+        if (pts2d.size()<3 || pts2d.size()!=viewPos.size() || pts2d.size()!=viewNorm.size()) return;
+
+        // y-range
+        int minY=(int)std::floor(pts2d[0].y), maxY=minY;
+        for (auto& p : pts2d) {
+            minY=std::min(minY,(int)std::floor(p.y));
+            maxY=std::max(maxY,(int)std::floor(p.y));
+        }
+
+        for (int y=minY; y<=maxY; ++y) {
+            struct Node { int x; double z; Point3D n; Point3D pos; };
+            std::vector<Node> nodes;
+            size_t n=pts2d.size();
+            for (size_t i=0,j=n-1;i<n;j=i++) {
+                const Point2D& A=pts2d[i]; const Point2D& B=pts2d[j];
+                const Point3D& pA=viewPos[i]; const Point3D& pB=viewPos[j];
+                const Point3D& nA=viewNorm[i]; const Point3D& nB=viewNorm[j];
+
+                bool crosses = (A.y<y && B.y>=y) || (B.y<y && A.y>=y);
+                if (!crosses) continue;
+
+                double t = (B.y == A.y) ? 0.0 : (y - A.y) / (B.y - A.y);
+                int x   = (int)std::floor(A.x + t*(B.x - A.x));
+                double z= pA.z + t*(pB.z - pA.z);
+                Point3D N( nA.x + t*(nB.x - nA.x),
+                           nA.y + t*(nB.y - nA.y),
+                           nA.z + t*(nB.z - nA.z) );
+                Point3D P( pA.x + t*(pB.x - pA.x),
+                           pA.y + t*(pB.y - pA.y),
+                           pA.z + t*(pB.z - pA.z) );
+                nodes.push_back({x,z,N,P});
+            }
+
+            std::sort(nodes.begin(),nodes.end(),[](auto&a,auto&b){return a.x<b.x;});
+            for (size_t k=0;k+1<nodes.size();k+=2) {
+                int x0=nodes[k].x, x1=nodes[k+1].x;
+                double z0=nodes[k].z, z1=nodes[k+1].z;
+                Point3D n0=nodes[k].n, n1=nodes[k+1].n;
+                Point3D p0=nodes[k].pos, p1=nodes[k+1].pos;
+
+                for (int x=x0; x<=x1; ++x) {
+                    double t = (x1==x0)?0.0:(double)(x-x0)/(x1-x0);
+                    double z = z0 + t*(z1 - z0);
+                    if (!rb.test_and_set_depth(x,y,z)) continue;
+
+                    Point3D N( n0.x + t*(n1.x - n0.x),
+                               n0.y + t*(n1.y - n0.y),
+                               n0.z + t*(n1.z - n0.z) );
+                    Point3D P( p0.x + t*(p1.x - p0.x),
+                               p0.y + t*(p1.y - p0.y),
+                               p0.z + t*(p1.z - p0.z) );
+
+                    // View-space: camera at origin, looking -Z → viewDir = -P
+                    Point3D viewDir(-P.x, -P.y, -P.z);
+                    double I01 = phong01(N, lightDir, viewDir, kd, ks, shininess);
+                    uint8_t I = (uint8_t)std::round((base/255.0)*255.0*I01);
+                    rb.set_pixel(x,y,I);
+                }
+            }
+        }
+    }
 
     void circle(const Point2D& center, int radius, uint8_t c=255) {
         Bresenham::circle(rb, (int)std::lround(center.x), (int)std::lround(center.y), radius, c);
