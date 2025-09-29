@@ -21,12 +21,14 @@ public:
         }
     }
 
+/*
     RasterBuffer(int w, int h, int c=1, PixelT clear=0)
         : width(w), height(h), channels(c), data(w*h*c, clear) {
         if (w<=0 || h<=0 || (c!=1 && c!=3 && c!=4)) {
             throw std::runtime_error("RasterBuffer: invalid dimensions or channels");
         }
     }
+*/
 
     inline bool has_depth() const { return !depth.empty(); }
     inline void clear_depth(double val=1e9) {
