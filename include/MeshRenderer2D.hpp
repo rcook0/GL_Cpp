@@ -1,4 +1,4 @@
-#pragma once
+ex#pragma once
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -146,13 +146,13 @@ public:
                 // Rasterize the triangle according to the selected mode
                 switch (mode) {
                     case RenderMode::Flat:
-                        draw_triangle_flat(S, P, faceN, zView, base);
+                        draw_triangle_flat(S, P, faceN, zView, base, useTex);
                         break;
                     case RenderMode::Gouraud:
-                        draw_triangle_gouraud(S, P, N, zView, base);
+                        draw_triangle_gouraud(S, P, N, zView, base, useTex);
                         break;
                     case RenderMode::Phong:
-                        draw_triangle_phong(S, P, N, zView, invW, base, kd, ks, shininess);
+                        draw_triangle_phong(S, P, N, zView, invW, base, kd, ks, shininess, useTex);
                         break;
                 }
 
@@ -233,7 +233,9 @@ private:
                                const std::array<Point3D,3>& P,
                                const std::array<Point3D,3>& N,
                                const std::array<double,3>& zView,
-                               uint8_t base)
+                               const std::array<POint2D,3>& UV,
+                               uint8_t base
+                               const Texture2D* tex)
     {
         int minX, minY, maxX, maxY;
         triBounds(S, minX, minY, maxX, maxY, rb.width, rb.height);
@@ -286,7 +288,9 @@ private:
                              const std::array<Point3D,3>& N,
                              const std::array<double,3>& zView,
                              const std::array<double,3>& invW,   // 1/z if perspectiveCorrect, else {1,1,1}
-                             uint8_t base, double kd, double ks, double shininess)
+                             const std::array<Point2D,3>& UV,
+                             uint8_t base, double kd, double ks, double shininess,
+                             const Texture2D* tex);
     {
         int minX, minY, maxX, maxY;
         triBounds(S, minX, minY, maxX, maxY, rb.width, rb.height);
