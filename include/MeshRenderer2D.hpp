@@ -1,4 +1,4 @@
-ex#pragma once
+#pragma once
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -80,6 +80,7 @@ public:
                 )
     {
         Drawing2D draw(rb);
+        const Material& mat = mesh.material;
         const Texture2D* useTex = tex ? tex : mesh.texture.get();
 
         // Default shading knobs
