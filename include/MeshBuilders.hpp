@@ -260,15 +260,17 @@ inline Mesh3D make_cube_grid_custom(
     double cubeW=1.0, double cubeH=1.0, double cubeD=1.0,
     double spacing=0.0,
     std::function<Transformation3D(int,int)> transformFn = nullptr)
+    std::function<Point3D(int,int)> colorFn = nullptr)
 {
     Mesh3D grid;
-    Mesh3D baseCube = make_cube(cubeW, cubeH, cubeD);
 
     double stepX = cubeW + spacing;
     double stepY = cubeD + spacing;  // careful: Z axis depth → “rows”
 
     for (int i=0; i<M; ++i) {
         for (int j=0; j<N; ++j) {
+            Point3D col = colorFn ? colorFn(i,j) : Point3D(1,1,1);
+            Mesh3D baseCube = make_cube(cubeW, cubeH, cubeD, col);
             // default placement
             Transformation3D T = Transformation3D::translation(i*stepX, 0, j*stepY);
             if (transformFn) {
