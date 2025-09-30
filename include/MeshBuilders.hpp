@@ -252,4 +252,41 @@ inline Mesh3D make_cube_grid(int M, int N,
     return grid;
 }
 
+// Make a grid of cubes, each cube can have its own transform callback
+// transformFn(i,j) returns a Transformation3D applied to that cube.
+inline Mesh3D make_cube_grid_custom(
+    int M, int N,
+    double cubeW=1.0, double cubeH=1.0, double cubeD=1.0,
+    double spacing=0.0,
+    std::function<Transformation3D(int,int)> transformFn = nullptr)
+{
+    Mesh3D grid;
+    Mesh3D baseCube = make_cube(cubeW, cubeH, cubeD);
+
+    double stepX = cubeW + spacing;
+    double stepY = cubeD + spacing;  // careful: Z axis depth → “rows”
+
+    for (int i=0; i<M; ++i) {
+        for (int j=0; j<N; ++j) {
+            // default placement
+            Transformation3D T = Transformation3D::translation(i*stepX, 0, j*stepY);
+            if (transformFn) {
+                // compose with user transform
+                T = transformFn(i,j) * T;
+            }
+
+            Mesh3D cube = transform_mesh(baseCube, T);
+
+            // append to grid mesh
+            int base = (int)grid.vertices.size();
+            grid.vertices.insert(grid.vertices.end(), cube.vertices.begin(), cube.vertices.end());
+            grid.uv.insert(grid.uv.end(), cube.uv.begin(), cube.uv.end());
+            for (auto f : cube.faces) {
+                for (int& idx : f.indices) idx += base;
+                grid.faces.push_back(f);
+            }
+        }
+    }
+    return grid;
+}
 
