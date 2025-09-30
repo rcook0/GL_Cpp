@@ -255,11 +255,27 @@ private:
                 double w0,w1,w2;
                 if (!barycentric(S, x, y, w0, w1, w2)) continue;
 
-                double z = w0*zView[0] + w1*zView[1] + w2*zView[2];
+                double z = w0*P[0].z + w1*P[1].z + w2*P[2].z;
                 if (!rb.test_and_set_depth(x,y,z)) continue;
 
+                // Interpolated intensity
                 double I = w0*Iv[0] + w1*Iv[1] + w2*Iv[2];
-                rb.set_pixel(x,y, to_u8((base/255.0) * I));
+
+                uint8_t R,G,B;
+                if (tex) {
+                    Point2D uvPix(
+                        w0*UV[0].x + w1*UV[1].x + w2*UV[2].x,
+                        w0*UV[0].y + w1*UV[1].y + w2*UV[2].y
+                    );
+                    tex->sample_bilinear(uvPix.x, uvPix.y, R,G,B);
+                    R = (uint8_t)(R * I);
+                    G = (uint8_t)(G * I);
+                    B = (uint8_t)(B * I);
+                } else {
+                    uint8_t c = (uint8_t)(255 * I);
+                    =G=B=c;
+                }
+                rb.set_pixel(x,y, R, G, B);
             }
         }
     }
@@ -316,8 +332,8 @@ private:
                 
                 double I = phong01(Npix, lightDir, Vdir, kd, ks, shininess);
                 uint8_t R,G,B;
-                if (useTex) {
-                    useTex->sample_bilinear(uvPix.x, uvPix.y, R,G,B);
+                if (tex) {
+                    tex->sample_bilinear(uvPix.x, uvPix.y, R,G,B);
                     R = (uint8_t)(R * I);
                     G = (uint8_t)(G * I);
                     B = (uint8_t)(B * I);
