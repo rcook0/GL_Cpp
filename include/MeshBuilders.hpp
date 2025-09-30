@@ -190,3 +190,66 @@ inline Mesh3D make_cube_sphere(int subdiv=8, double radius=1.0) {
 
     return mesh;
 }
+
+inline Mesh3D make_cube(double w=1.0, double h=1.0, double d=1.0) {
+    Mesh3D mesh;
+    double x=w*0.5, y=h*0.5, z=d*0.5;
+
+    int v0 = mesh.add_vertex(Point3D(-x,-y,-z), Point2D(0,0));
+    int v1 = mesh.add_vertex(Point3D( x,-y,-z), Point2D(1,0));
+    int v2 = mesh.add_vertex(Point3D( x, y,-z), Point2D(1,1));
+    int v3 = mesh.add_vertex(Point3D(-x, y,-z), Point2D(0,1));
+
+    int v4 = mesh.add_vertex(Point3D(-x,-y, z), Point2D(0,0));
+    int v5 = mesh.add_vertex(Point3D( x,-y, z), Point2D(1,0));
+    int v6 = mesh.add_vertex(Point3D( x, y, z), Point2D(1,1));
+    int v7 = mesh.add_vertex(Point3D(-x, y, z), Point2D(0,1));
+
+    // 12 triangles
+    mesh.add_face({v0,v1,v2}); mesh.add_face({v0,v2,v3}); // back
+    mesh.add_face({v4,v6,v5}); mesh.add_face({v4,v7,v6}); // front
+    mesh.add_face({v0,v4,v5}); mesh.add_face({v0,v5,v1}); // bottom
+    mesh.add_face({v3,v2,v6}); mesh.add_face({v3,v6,v7}); // top
+    mesh.add_face({v1,v5,v6}); mesh.add_face({v1,v6,v2}); // right
+    mesh.add_face({v0,v3,v7}); mesh.add_face({v0,v7,v4}); // left
+
+    return mesh;
+}
+
+inline Mesh3D transform_mesh(const Mesh3D& m, const Transformation3D& T) {
+    Mesh3D out = m;
+    for (auto& v : out.vertices) v = T.apply(v);
+    return out;
+}
+
+inline Mesh3D make_cube_grid(int M, int N,
+                             double cubeW=1.0, double cubeH=1.0, double cubeD=1.0,
+                             double spacing=0.0) {
+    Mesh3D grid;
+    Mesh3D baseCube = make_cube(cubeW, cubeH, cubeD);
+
+    double stepX = cubeW + spacing;
+    double stepY = cubeH + spacing;
+
+    for (int i=0; i<M; ++i) {
+        for (int j=0; j<N; ++j) {
+            // translate each cube to its grid position
+            Transformation3D T = Transformation3D::translation(
+                i*stepX, 0, j*stepY
+            );
+            Mesh3D cube = transform_mesh(baseCube, T);
+
+            // append vertices + faces into grid mesh
+            int base = (int)grid.vertices.size();
+            grid.vertices.insert(grid.vertices.end(), cube.vertices.begin(), cube.vertices.end());
+            grid.uv.insert(grid.uv.end(), cube.uv.begin(), cube.uv.end());
+            for (auto f : cube.faces) {
+                for (int& idx : f.indices) idx += base;
+                grid.faces.push_back(f);
+            }
+        }
+    }
+    return grid;
+}
+
+
