@@ -155,30 +155,33 @@ inline Mesh3D make_cube_sphere(int subdiv=8, double radius=1.0) {
     // We'll generate vertices face by face, but deduplicate across edges if you like.
     // Here, simpler: each face makes its own verts, so some duplication (fine for rendering).
 
-    auto buildFace = [&](int axis, int dir) {
+    auto buildFace = [&](int axis, int dir, int faceIndex) {
         // axis: 0=x,1=y,2=z; dir: +1 or -1
-        // grid in the other two axes
+        // faceIndex: 0..5 (for cube map layout later if needed)
+
+        int base = (int)mesh.vertices.size();
         for (int i=0; i<=subdiv; ++i) {
-            double u = -1.0 + 2.0*i/subdiv;
+            double u = (double)i/subdiv;
+            double uu = -1.0 + 2.0*u;
             for (int j=0; j<=subdiv; ++j) {
-                double v = -1.0 + 2.0*j/subdiv;
+                double v = (double)j/subdiv;
+                double vv = -1.0 + 2.0*v
                 double x=0,y=0,z=0;
                 if (axis==0) { x = dir; y=u; z=v; }
                 if (axis==1) { y = dir; x=u; z=v; }
                 if (axis==2) { z = dir; x=u; y=v; }
-                mesh.add_vertex(normalize(x,y,z));
+                Point3D pos = normalize(x,y,z);
+                Point2D tex(u,v);
+                mesh.add_vertex(pos, tex);
             }
         }
 
-        // faces
-        int base = (int)mesh.vertices.size() - (subdiv+1)*(subdiv+1);
         for (int i=0; i<subdiv; ++i) {
             for (int j=0; j<subdiv; ++j) {
                 int v0 = base + i*(subdiv+1) + j;
                 int v1 = v0 + 1;
                 int v2 = v0 + (subdiv+1);
                 int v3 = v2 + 1;
-                // split into two triangles
                 mesh.add_face({v0,v1,v3});
                 mesh.add_face({v0,v3,v2});
             }
