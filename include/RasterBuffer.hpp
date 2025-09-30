@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <type_traits>
 #include <cstdint>
+#include <cctype> 
 
 #ifdef USE_STB_IMAGE_WRITE
 #include "stb_image_write.h"
@@ -118,4 +119,35 @@ public:
             }
         }
     }
+
+    // Utility: lowercase a string
+inline std::string toLower(const std::string& s) {
+    std::string out = s;
+    for (auto& c : out) c = (char)std::tolower((unsigned char)c);
+    return out;
+}
+
+    void save_image(const std::string& filename) const {
+    std::string ext;
+    size_t dot = filename.find_last_of('.');
+    if (dot != std::string::npos) ext = toLower(filename.substr(dot+1));
+
+    if (ext == "ppm") {
+        save_ppm(filename);
+        return;
+    }
+#ifdef USE_STB_IMAGE_WRITE
+    if (ext == "png") {
+        save_png(filename);
+        return;
+    }
+    if (ext == "jpg" || ext == "jpeg") {
+        int quality = 90; // default
+        stbi_write_jpg(filename.c_str(), width, height, channels,
+                       data.data(), quality);
+        return;
+    }
+#endif
+    throw std::runtime_error("RasterBuffer: unsupported extension: " + ext);
+}
 };
