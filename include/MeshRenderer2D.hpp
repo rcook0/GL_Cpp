@@ -18,8 +18,6 @@ enum class RenderMode {
     Phong       // per-pixel (interpolated normals)
 };
 
-
-
 class MeshRenderer2D {
 public:
     RasterBuffer<uint8_t>& rb;
@@ -293,13 +291,22 @@ private:
                     a0*N[0].z + a1*N[1].z + a2*N[2].z
                 );
 
+                Point3D Cpix(
+                    a0*mesh.colors[i0].x + a1*mesh.colors[i1].x + a2*mesh.colors[i2].x,
+                    a0*mesh.colors[i0].y + a1*mesh.colors[i1].y + a2*mesh.colors[i2].y,
+                    a0*mesh.colors[i0].z + a1*mesh.colors[i1].z + a2*mesh.colors[i2].z
+                );
+
                 double z = a0*zView[0] + a1*zView[1] + a2*zView[2];
                 if (!rb.test_and_set_depth(x,y,z)) continue;
 
                 // View direction in view space: camera at origin → -P
                 Point3D Vdir(-Ppix.x, -Ppix.y, -Ppix.z);
                 double I = phong01(Npix, lightDir, Vdir, kd, ks, shininess);
-                rb.set_pixel(x,y, to_u8((base/255.0) * I));
+                uint8_t R = (unit8_t)std::round(255.0 * clamp01(Cpix.x * I));
+                uint8_t G = (unit8_t)std::round(255.0 * clamp01(Cpix.y * I));
+                uint8_t B = (unit8_t)std::round(255.0 * clamp01(Cpix.z * I));
+                rb.set_pixel(x, y, R, G, B);
             }
         }
     }
