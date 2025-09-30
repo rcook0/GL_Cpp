@@ -1,0 +1,25 @@
+/*
+A flat grid of cubes (like floor tiles, voxel terrain, or Minecraft-ish walls).
+
+Full control over cube dimensions (width, height, depth).
+
+Whole-grid transforms (rotate/scale about a local axis).
+
+Rendered (Flat, Gouraud, Phong).
+*/
+
+Mesh3D grid = make_cube_grid(4, 3, 1.0, 0.5, 1.0, 0.2);
+
+// Rotate whole grid around its own center
+Transformation3D model = Transformation3D::translation(-2.0,0,-1.5) *
+                         Transformation3D::rotation_y(0.5) *
+                         Transformation3D::scale(1.2, 1.0, 0.8);
+
+grid = transform_mesh(grid, model);
+
+Transformation3D V = cam.view_matrix();
+for (auto& p : grid.vertices) p = V.apply(p);
+auto vnorm = grid.compute_vertex_normals();
+
+renderer.render(grid, vnorm, RenderMode::Phong);
+rb.save_ppm("grid_of_cubes.ppm");
