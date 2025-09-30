@@ -76,8 +76,10 @@ public:
                 const std::vector<Point3D>& vertexNormals,
                 RenderMode mode = RenderMode::Gouraud,
                 bool drawWire = false,
+                const Texture2D* tex = nullptr 
+                /*
                 bool perspectiveCorrect = true,
-                uint8_t base = 230, double kd = 0.7, double ks = 0.3, double shininess = 24.0)
+                uint8_t base = 230, double kd = 0.7, double ks = 0.3, double shininess = 24.0 */)
     {
         Drawing2D draw(rb);
 
@@ -242,6 +244,11 @@ private:
             lambert01(N[2], lightDir)
         };
 
+        // Per-vertex UVs
+        std::array<Point2D,3> UV = {
+            mesh.uv[tri[0]], mesh.uv[tri[1]], mesh.uv[tri[2]]
+        };
+
         for (int y=minY; y<=maxY; ++y) {
             for (int x=minX; x<=maxX; ++x) {
                 double w0,w1,w2;
@@ -298,13 +305,25 @@ private:
                     a0*mesh.colors[i0].y + a1*mesh.colors[i1].y + a2*mesh.colors[i2].y,
                     a0*mesh.colors[i0].z + a1*mesh.colors[i1].z + a2*mesh.colors[i2].z
                 );
-
                 // View direction in view space: camera at origin → -P
                 Point3D Vdir(-Ppix.x, -Ppix.y, -Ppix.z);
+                
+                Point2D uvPix(
+                    a0*mesh.uv[i0].x + a1*mesh.uv[i1].x + a2*mesh.uv[i2].x,
+                    a0*mesh.uv[i0].y + a1*mesh.uv[i1].y + a2*mesh.uv[i2].y
+                )
+                
                 double I = phong01(Npix, lightDir, Vdir, kd, ks, shininess);
-                uint8_t R = (unit8_t)std::round(255.0 * clamp01(Cpix.x * I));
-                uint8_t G = (unit8_t)std::round(255.0 * clamp01(Cpix.y * I));
-                uint8_t B = (unit8_t)std::round(255.0 * clamp01(Cpix.z * I));
+                uint8_t R,G,B;
+                if (tex) {
+                    tex->sample_bilinear(uvPix.x, uvPix.y, R,G,B);
+                    R = (uint8_t)(R * I);
+                    G = (uint8_t)(G * I);
+                    B = (uint8_t)(B * I);
+                } else {
+                    uint8_t c = (uint8_t)(255 * I);
+                    R=G=B=c;
+                }
                 rb.set_pixel(x, y, R, G, B);
             }
         }
