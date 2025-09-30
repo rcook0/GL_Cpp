@@ -191,19 +191,20 @@ inline Mesh3D make_cube_sphere(int subdiv=8, double radius=1.0) {
     return mesh;
 }
 
-inline Mesh3D make_cube(double w=1.0, double h=1.0, double d=1.0) {
+inline Mesh3D make_cube(double w=1.0, double h=1.0, double d=1.0,
+                        const Point3D& col = Point3D(1,1,1)) {
     Mesh3D mesh;
     double x=w*0.5, y=h*0.5, z=d*0.5;
 
-    int v0 = mesh.add_vertex(Point3D(-x,-y,-z), Point2D(0,0));
-    int v1 = mesh.add_vertex(Point3D( x,-y,-z), Point2D(1,0));
-    int v2 = mesh.add_vertex(Point3D( x, y,-z), Point2D(1,1));
-    int v3 = mesh.add_vertex(Point3D(-x, y,-z), Point2D(0,1));
+    int v0 = mesh.add_vertex(Point3D(-x,-y,-z), Point2D(0,0), col);
+    int v1 = mesh.add_vertex(Point3D( x,-y,-z), Point2D(1,0), col);
+    int v2 = mesh.add_vertex(Point3D( x, y,-z), Point2D(1,1), col);
+    int v3 = mesh.add_vertex(Point3D(-x, y,-z), Point2D(0,1), col);
 
-    int v4 = mesh.add_vertex(Point3D(-x,-y, z), Point2D(0,0));
-    int v5 = mesh.add_vertex(Point3D( x,-y, z), Point2D(1,0));
-    int v6 = mesh.add_vertex(Point3D( x, y, z), Point2D(1,1));
-    int v7 = mesh.add_vertex(Point3D(-x, y, z), Point2D(0,1));
+    int v4 = mesh.add_vertex(Point3D(-x,-y, z), Point2D(0,0), col);
+    int v5 = mesh.add_vertex(Point3D( x,-y, z), Point2D(1,0), col);
+    int v6 = mesh.add_vertex(Point3D( x, y, z), Point2D(1,1), col);
+    int v7 = mesh.add_vertex(Point3D(-x, y, z), Point2D(0,1), col);
 
     // 12 triangles
     mesh.add_face({v0,v1,v2}); mesh.add_face({v0,v2,v3}); // back
