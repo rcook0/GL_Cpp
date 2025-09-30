@@ -135,10 +135,6 @@ inline Mesh3D make_icosphere(int subdivisions=2, double radius=1.0) {
     return subdivide_icosphere(ico, subdivisions, radius);
 }
 
-#pragma once
-#include "Mesh3D.hpp"
-#include <cmath>
-
 // -------- Cube-sphere generator --------
 // subdiv = number of subdivisions per cube edge (>=1).
 // radius = sphere radius.
