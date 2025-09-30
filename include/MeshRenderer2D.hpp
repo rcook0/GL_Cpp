@@ -290,7 +290,6 @@ private:
                     a0*N[0].y + a1*N[1].y + a2*N[2].y,
                     a0*N[0].z + a1*N[1].z + a2*N[2].z
                 );
-
                 Point3D Cpix(
                     a0*mesh.colors[i0].x + a1*mesh.colors[i1].x + a2*mesh.colors[i2].x,
                     a0*mesh.colors[i0].y + a1*mesh.colors[i1].y + a2*mesh.colors[i2].y,
