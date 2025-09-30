@@ -77,12 +77,15 @@ public:
                 RenderMode mode = RenderMode::Gouraud,
                 bool drawWire = false,
                 const Texture2D* tex = nullptr 
-                /*
-                bool perspectiveCorrect = true,
-                uint8_t base = 230, double kd = 0.7, double ks = 0.3, double shininess = 24.0 */)
+                )
     {
         Drawing2D draw(rb);
         const Texture2D* useTex = tex ? tex : mesh.texture.get();
+
+        // Default shading knobs
+        const bool     perspectiveCorrect = true;
+        const uint8_t  base = 230;
+        const double   kd = 0.7, ks = 0.3, shininess = 24.0;
 
         // Viewport mapping: NDC [-1,1] -> pixel coords
         auto viewport = [&](const Point2D& p) {
@@ -123,16 +126,19 @@ public:
                     vertexNormals[tri[1]],
                     vertexNormals[tri[2]]
                 };
+                std::array<Point2D,3> UV = { 
+                    mesh.uv[tri[0]],
+                    mesh.uv[tri[1]],
+                    mmesh.uv[tri[2]] };
 
                 // Project to NDC and viewport-mapped screen coords
                 std::array<Point2D,3> S;
-                std::array<double,3>   zView;
-                std::array<double,3>   invW;
+                std::array<double,3>   zView, invW;
+                
                 for (int i=0;i<3;++i) {
                     Point2D ndc = projection.project(P[i]);  // our Projection3D returns NDC-like coords
                     S[i] = viewport(ndc);
                     zView[i] = P[i].z;
-
                     // Approximate perspective correction with 1/z
                     // Clamp to avoid inf if z ~ 0 (behind near plane we shouldn't draw anyway)
                     double z = std::max(1e-6, std::abs(P[i].z));
@@ -206,24 +212,23 @@ private:
                             const std::array<Point3D,3>& P,  // view-space positions
                             const Point3D& faceN_view,
                             const std::array<double,3>& zView,
-                            uint8_t base)
+                            uint8_t base,
+                            const Texture2D* tex)
     {
         int minX, minY, maxX, maxY;
         triBounds(S, minX, minY, maxX, maxY, rb.width, rb.height);
 
         // The same face normal everywhere
         double I = lambert01(faceN_view, lightDir);
-        uint8_t Iu = (uint8_t)std::round((base / 255.0) * 255.0 * I);
+        uint8_t gray = (uint8_t)(base * I);
 
         for (int y=minY; y<=maxY; ++y) {
             for (int x=minX; x<=maxX; ++x) {
                 double w0,w1,w2;
                 if (!barycentric(S, x, y, w0, w1, w2)) continue;
-
-                double z = w0*zView[0] + w1*zView[1] + w2*zView[2];
+                double z = w0*P[0].z + w1*P[1].z + w2*P[2].z;
                 if (!rb.test_and_set_depth(x,y,z)) continue;
-
-                rb.set_pixel(x,y,Iu);
+                rb.set_pixel(x,y,gray,gray,gray);
             }
         }
     }
@@ -247,17 +252,16 @@ private:
             lambert01(N[2], lightDir)
         };
 
-        // Per-vertex UVs
+  /*      // Per-vertex UVs
         std::array<Point2D,3> UV = {
             mesh.uv[tri[0]], mesh.uv[tri[1]], mesh.uv[tri[2]]
-        };
+        };  */
 
         for (int y=minY; y<=maxY; ++y) {
             for (int x=minX; x<=maxX; ++x) {
                 double w0,w1,w2;
                 if (!barycentric(S, x, y, w0, w1, w2)) continue;
-
-                double z = w0*P[0].z + w1*P[1].z + w2*P[2].z;
+                double z = w0*zView[0] + w1*zView[1] + w2*zView[2];
                 if (!rb.test_and_set_depth(x,y,z)) continue;
 
                 // Interpolated intensity
@@ -274,8 +278,12 @@ private:
                     G = (uint8_t)(G * I);
                     B = (uint8_t)(B * I);
                 } else {
-                    uint8_t c = (uint8_t)(255 * I);
-                    =G=B=c;
+                    Point3D Cpix(w0*C[0].x + w1*C[1].x + w2*C[2].x,
+                             w0*C[0].y + w1*C[1].y + w2*C[2].y,
+                             w0*C[0].z + w1*C[1].z + w2*C[2].z);
+                    R = (uint8_t)(255 * clamp01(Cpix.x * I));
+                    G = (uint8_t)(255 * clamp01(Cpix.y * I));
+                    B = (uint8_t)(255 * clamp01(Cpix.z * I));
                 }
                 rb.set_pixel(x,y, R, G, B);
             }
@@ -290,7 +298,7 @@ private:
                              const std::array<double,3>& invW,   // 1/z if perspectiveCorrect, else {1,1,1}
                              const std::array<Point2D,3>& UV,
                              uint8_t base, double kd, double ks, double shininess,
-                             const Texture2D* tex);
+                             const Texture2D* tex)
     {
         int minX, minY, maxX, maxY;
         triBounds(S, minX, minY, maxX, maxY, rb.width, rb.height);
@@ -303,47 +311,41 @@ private:
                 // Perspective-ish correction: interpolate with 1/z weights
                 double iw = w0*invW[0] + w1*invW[1] + w2*invW[2];
                 if (iw <= 1e-12) continue;
-                double a0 = (w0*invW[0]) / iw;
-                double a1 = (w1*invW[1]) / iw;
-                double a2 = (w2*invW[2]) / iw;
+                double a0=(w0*invW[0])/iw, a1=(w1*invW[1])/iw, a2=(w2*invW[2])/iw;
 
-                double z = a0*zView[0] + a1*zView[1] + a2*zView[2];
-                if (!rb.test_and_set_depth(x,y,z)) continue;
-                
                 // Interpolate view-space position & normal
                 Point3D Ppix(
                     a0*P[0].x + a1*P[1].x + a2*P[2].x,
                     a0*P[0].y + a1*P[1].y + a2*P[2].y,
-                    a0*P[0].z + a1*P[1].z + a2*P[2].z
-                );
+                    a0*P[0].z + a1*P[1].z + a2*P[2].z);
                 Point3D Npix(
                     a0*N[0].x + a1*N[1].x + a2*N[2].x,
                     a0*N[0].y + a1*N[1].y + a2*N[2].y,
-                    a0*N[0].z + a1*N[1].z + a2*N[2].z
-                );
-                Point3D Cpix(
-                    a0*mesh.colors[i0].x + a1*mesh.colors[i1].x + a2*mesh.colors[i2].x,
-                    a0*mesh.colors[i0].y + a1*mesh.colors[i1].y + a2*mesh.colors[i2].y,
-                    a0*mesh.colors[i0].z + a1*mesh.colors[i1].z + a2*mesh.colors[i2].z
-                );
+                    a0*N[0].z + a1*N[1].z + a2*N[2].z);
+                
+                double z = a0*zView[0] + a1*zView[1] + a2*zView[2];
+                if (!rb.test_and_set_depth(x,y,z)) continue;
+                
                 // View direction in view space: camera at origin → -P
                 Point3D Vdir(-Ppix.x, -Ppix.y, -Ppix.z);
                 
-                Point2D uvPix(
-                    a0*mesh.uv[i0].x + a1*mesh.uv[i1].x + a2*mesh.uv[i2].x,
-                    a0*mesh.uv[i0].y + a1*mesh.uv[i1].y + a2*mesh.uv[i2].y
-                )
-                
                 double I = phong01(Npix, lightDir, Vdir, kd, ks, shininess);
                 uint8_t R,G,B;
-                if (tex) {
+                if (tex) {  // Texture attached
+                    Point2D uvPix(a0*UV[0].x + a1*UV[1].x + a2*UV[2].x,
+                                  a0*UV[0].y + a1*UV[1].y + a2*UV[2].y);
                     tex->sample_bilinear(uvPix.x, uvPix.y, R,G,B);
-                    R = (uint8_t)(R * I);
-                    G = (uint8_t)(G * I);
+                    R = (uint8_t)(R * I); 
+                    G = (uint8_t)(G * I); 
                     B = (uint8_t)(B * I);
-                } else {
-                    uint8_t c = (uint8_t)(255 * I);
-                    R=G=B=c;
+                } else {  // Color path
+                    Point3D Cpix(
+                        a0*C[0].x + a1*C[1].x + a2*C[2].x,
+                        a0*C[0].y + a1*C[1].y + a2*C[2].y,
+                        a0*C[0].z + a1*C[1].z + a2*C[2].z); 
+                    R=(uint8_t)(255 * clamp01(Cpix.x * I));
+                    G=(uint8_t)(255 * clamp01(Cpix.y * I));
+                    B=(uint8_t)(255 * clamp01(Cpix.z * I));
                 }
                 rb.set_pixel(x, y, R, G, B);
             }
