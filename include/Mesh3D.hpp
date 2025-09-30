@@ -13,9 +13,16 @@ class Mesh3D {
 public:
     std::vector<Point3D> vertices;
     std::vector<Face>    faces;
+    std::vector<Point2D> uv;    // optional per-vertex UVs
 
     int add_vertex(const Point3D& v) {
         vertices.push_back(v);
+        return (int)vertices.size()-1;
+    }
+
+    int add_vertex(const Point3D& v, const Point2D& tex = Point2D(0,0)) {
+        vertices.push_back(v);
+        uv.push_back(tex);
         return (int)vertices.size()-1;
     }
 
