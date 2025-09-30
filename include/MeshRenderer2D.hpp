@@ -149,16 +149,21 @@ public:
                 double area = edgeFunction(S[0], S[1], S[2]);
                 if (area >= 0) continue; // CW vs CCW depending on convention; skip if away
 
+                std::array<Point3D,3> C = { mesh.colors[tri[0]],
+                            mesh.colors[tri[1]],
+                            mesh.colors[tri[2]] };
+                
                 // Rasterize the triangle according to the selected mode
                 switch (mode) {
                     case RenderMode::Flat:
                         draw_triangle_flat(S, P, faceN, zView, base, useTex);
                         break;
                     case RenderMode::Gouraud:
-                        draw_triangle_gouraud(S, P, N, zView, base, useTex);
+                        draw_triangle_gouraud(S, P, N, zView, UV, C, base, useTex);
                         break;
                     case RenderMode::Phong:
-                        draw_triangle_phong(S, P, N, zView, invW, base, kd, ks, shininess, useTex);
+                        draw_triangle_phong(S, P, N, zView, invW, UV, C, 
+                                            base, kd, ks, shininess, useTex);
                         break;
                 }
 
