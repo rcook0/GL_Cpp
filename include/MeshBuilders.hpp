@@ -284,6 +284,7 @@ inline Mesh3D make_cube_grid_custom(
             int base = (int)grid.vertices.size();
             grid.vertices.insert(grid.vertices.end(), cube.vertices.begin(), cube.vertices.end());
             grid.uv.insert(grid.uv.end(), cube.uv.begin(), cube.uv.end());
+            grid.colors.insert(grid.colors.end(), cube.colors.begin(), cube.colors.end());
             for (auto f : cube.faces) {
                 for (int& idx : f.indices) idx += base;
                 grid.faces.push_back(f);
