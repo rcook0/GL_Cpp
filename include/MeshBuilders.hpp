@@ -134,3 +134,60 @@ inline Mesh3D make_icosphere(int subdivisions=2, double radius=1.0) {
     if (subdivisions<=0) return ico;
     return subdivide_icosphere(ico, subdivisions, radius);
 }
+
+#pragma once
+#include "Mesh3D.hpp"
+#include <cmath>
+
+// -------- Cube-sphere generator --------
+// subdiv = number of subdivisions per cube edge (>=1).
+// radius = sphere radius.
+inline Mesh3D make_cube_sphere(int subdiv=8, double radius=1.0) {
+    Mesh3D mesh;
+    if (subdiv < 1) subdiv = 1;
+
+    auto normalize = [&](double x,double y,double z){
+        double len = std::sqrt(x*x + y*y + z*z);
+        return Point3D(x/len*radius, y/len*radius, z/len*radius);
+    };
+
+    // Each face of cube spans [-1,1] in 2D grid.
+    // We'll generate vertices face by face, but deduplicate across edges if you like.
+    // Here, simpler: each face makes its own verts, so some duplication (fine for rendering).
+
+    auto buildFace = [&](int axis, int dir) {
+        // axis: 0=x,1=y,2=z; dir: +1 or -1
+        // grid in the other two axes
+        for (int i=0; i<=subdiv; ++i) {
+            double u = -1.0 + 2.0*i/subdiv;
+            for (int j=0; j<=subdiv; ++j) {
+                double v = -1.0 + 2.0*j/subdiv;
+                double x=0,y=0,z=0;
+                if (axis==0) { x = dir; y=u; z=v; }
+                if (axis==1) { y = dir; x=u; z=v; }
+                if (axis==2) { z = dir; x=u; y=v; }
+                mesh.add_vertex(normalize(x,y,z));
+            }
+        }
+
+        // faces
+        int base = (int)mesh.vertices.size() - (subdiv+1)*(subdiv+1);
+        for (int i=0; i<subdiv; ++i) {
+            for (int j=0; j<subdiv; ++j) {
+                int v0 = base + i*(subdiv+1) + j;
+                int v1 = v0 + 1;
+                int v2 = v0 + (subdiv+1);
+                int v3 = v2 + 1;
+                // split into two triangles
+                mesh.add_face({v0,v1,v3});
+                mesh.add_face({v0,v3,v2});
+            }
+        }
+    };
+
+    buildFace(0,1);  buildFace(0,-1);
+    buildFace(1,1);  buildFace(1,-1);
+    buildFace(2,1);  buildFace(2,-1);
+
+    return mesh;
+}
