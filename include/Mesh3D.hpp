@@ -3,6 +3,7 @@
 #include "Polygon3D.hpp"
 #include <vector>
 #include <numeric>
+#include "Material.hpp"
 
 struct Face {
     // triangle or quad (N-gon allowed)
@@ -15,6 +16,8 @@ public:
     std::vector<Face>    faces;
     std::vector<Point2D> uv;    // optional per-vertex UVs
     std::vector<Point3D> colors;
+
+    Material material;
 
     int add_vertex(const Point3D& v) {
         vertices.push_back(v);
