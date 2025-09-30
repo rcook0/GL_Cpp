@@ -6,6 +6,10 @@
 #include <type_traits>
 #include <cstdint>
 
+#ifdef USE_STB_IMAGE_WRITE
+#include "stb_image_write.h"
+#endif
+
 template<typename PixelT=uint8_t>
 class RasterBuffer {
 public:
@@ -36,6 +40,27 @@ public:
         if (z < depth[idx]) { depth[idx] = z; return true; }
         return false; // occluded
     }
+
+    void save_png(const std::string& filename) const {
+    #ifndef USE_STB_IMAGE_WRITE
+        throw std::runtime_error("RasterBuffer: stb_image_write not enabled");
+    #else
+        if (channels == 1) {
+            // Save grayscale as 3-channel
+            std::vector<uint8_t> rgb(width*height*3);
+            for (int i=0;i<width*height;i++) {
+                rgb[i*3+0] = data[i];
+                rgb[i*3+1] = data[i];
+                rgb[i*3+2] = data[i];
+            }
+            stbi_write_png(filename.c_str(), width, height, 3, rgb.data(), width*3);
+        } else {
+            stbi_write_png(filename.c_str(), width, height, channels,
+                           data.data(), width*channels);
+        }
+    #endif
+    }
+
 
     // --- Set pixel (grayscale, RGB, RGBA) ---
     void set_pixel(int x,int y, PixelT gray) {
