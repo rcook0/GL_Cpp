@@ -82,6 +82,7 @@ public:
                 uint8_t base = 230, double kd = 0.7, double ks = 0.3, double shininess = 24.0 */)
     {
         Drawing2D draw(rb);
+        const Texture2D* useTex = tex ? tex : mesh.texture.get();
 
         // Viewport mapping: NDC [-1,1] -> pixel coords
         auto viewport = [&](const Point2D& p) {
@@ -315,8 +316,8 @@ private:
                 
                 double I = phong01(Npix, lightDir, Vdir, kd, ks, shininess);
                 uint8_t R,G,B;
-                if (tex) {
-                    tex->sample_bilinear(uvPix.x, uvPix.y, R,G,B);
+                if (useTex) {
+                    useTex->sample_bilinear(uvPix.x, uvPix.y, R,G,B);
                     R = (uint8_t)(R * I);
                     G = (uint8_t)(G * I);
                     B = (uint8_t)(B * I);
