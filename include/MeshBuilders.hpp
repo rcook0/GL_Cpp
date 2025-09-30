@@ -272,11 +272,8 @@ inline Mesh3D make_cube_grid_custom(
             Point3D col = colorFn ? colorFn(i,j) : Point3D(1,1,1);
             Mesh3D baseCube = make_cube(cubeW, cubeH, cubeD, col);
             // default placement
-            Transformation3D T = Transformation3D::translation(i*stepX, 0, j*stepY);
-            if (transformFn) {
-                // compose with user transform
-                T = transformFn(i,j) * T;
-            }
+            Transformation3D T = Transformation3D::translation(i*(cubeW+spacing), 0, j*(cubeD+spacing));
+            if (transformFn) T = transformFn(i,j) * T;    // compose with user transform
 
             Mesh3D cube = transform_mesh(baseCube, T);
 
