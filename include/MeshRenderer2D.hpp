@@ -279,6 +279,9 @@ private:
                 double a1 = (w1*invW[1]) / iw;
                 double a2 = (w2*invW[2]) / iw;
 
+                double z = a0*zView[0] + a1*zView[1] + a2*zView[2];
+                if (!rb.test_and_set_depth(x,y,z)) continue;
+                
                 // Interpolate view-space position & normal
                 Point3D Ppix(
                     a0*P[0].x + a1*P[1].x + a2*P[2].x,
@@ -295,9 +298,6 @@ private:
                     a0*mesh.colors[i0].y + a1*mesh.colors[i1].y + a2*mesh.colors[i2].y,
                     a0*mesh.colors[i0].z + a1*mesh.colors[i1].z + a2*mesh.colors[i2].z
                 );
-
-                double z = a0*zView[0] + a1*zView[1] + a2*zView[2];
-                if (!rb.test_and_set_depth(x,y,z)) continue;
 
                 // View direction in view space: camera at origin → -P
                 Point3D Vdir(-Ppix.x, -Ppix.y, -Ppix.z);
